@@ -13,65 +13,75 @@ jupyter:
     name: python3
 ---
 
----
-
-_You are currently looking at **version 1.3** of this notebook. To download notebooks and datafiles, as well as get help on Jupyter notebooks in the Coursera platform, visit the [Jupyter Notebook FAQ](https://www.coursera.org/learn/python-machine-learning/resources/bANLa) course resource._
-
----
-
-
 # Assignment 1 - Introduction to Machine Learning
 
+For this assignment, you will be using the Breast Cancer Wisconsin (Diagnostic)
+Database to create a classifier that can help diagnose patients. First, read
+through the description of the dataset (below).
 
-For this assignment, you will be using the Breast Cancer Wisconsin (Diagnostic) Database to create a classifier that can help diagnose patients. First, read through the description of the dataset (below).
 
 ```{python}
 import numpy as np
 import pandas as pd
 from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+
 
 cancer = load_breast_cancer()
 
-#print(cancer.DESCR) # Print the data set description
+# Print the dataset description:
+print(cancer.DESCR)
 ```
 
-The object returned by `load_breast_cancer()` is a scikit-learn Bunch object, which is similar to a dictionary.
+
+The object returned by `load_breast_cancer()` is a scikit-learn Bunch object,
+which is similar to a dictionary.
+
 
 ```{python}
 cancer.keys()
 ```
 
-### Question 0 (Example)
+
+## Question 0 (Example)
 
 How many features does the breast cancer dataset have?
 
 *This function should return an integer.*
 
+
 ```{python}
-# You should write your whole answer within the function provided. The autograder will call
-# this function and compare the return value against the correct solution value
+# You should write your whole answer within the function provided. The
+# autograder will call this function and compare the return value against the
+# correct solution value.
 def answer_zero():
-    # This function returns the number of features of the breast cancer dataset, which is an integer. 
-    # The assignment question description will tell you the general format the autograder is expecting
+    # This function returns the number of features of the breast cancer
+    # dataset, which is an integer. The assignment question description will tell
+    # you the general format the autograder is expecting.
     return len(cancer['feature_names'])
 
-# You can examine what your function returns by calling it in the cell. If you have questions
-# about the assignment formats, check out the discussion forums for any FAQs
-answer_zero() 
+
+# You can examine what your function returns by calling it in the cell. If you
+# have questions about the assignment formats, check out the discussion forums
+# for any FAQs.
+answer_zero()
 ```
 
-<!-- #region -->
-### Question 1
 
-Scikit-learn works with lists, numpy arrays, scipy-sparse matrices, and pandas DataFrames, so converting the dataset to a DataFrame is not necessary for training this model. Using a DataFrame does however help make many things easier such as munging data, so let's practice creating a classifier with a pandas DataFrame. 
+## Question 1
 
+Scikit-learn works with lists, numpy arrays, scipy-sparse matrices, and pandas
+DataFrames, so converting the dataset to a DataFrame is not necessary for
+training this model. Using a DataFrame does however help make many things
+easier such as munging data, so let's practice creating a classifier with
+a pandas DataFrame.
 
+Convert the sklearn.dataset `cancer` to a DataFrame.
 
-Convert the sklearn.dataset `cancer` to a DataFrame. 
+*This function should return a `(569, 31)` DataFrame with*
 
-*This function should return a `(569, 31)` DataFrame with * 
-
-*columns = *
+*columns =*
 
     ['mean radius', 'mean texture', 'mean perimeter', 'mean area',
     'mean smoothness', 'mean compactness', 'mean concavity',
@@ -84,199 +94,467 @@ Convert the sklearn.dataset `cancer` to a DataFrame.
     'worst concave points', 'worst symmetry', 'worst fractal dimension',
     'target']
 
-*and index = *
+*and index =*
 
     RangeIndex(start=0, stop=569, step=1)
-<!-- #endregion -->
+
+**Note:** The following solution is correct. However, it requires a newer
+version of pandas. This is important, since Coursera's environment has an
+older version of this module. Then the function below won't work as intended
+there. It'll give you a result, but an incorrect one. Specifically, the
+columns of the DataFrame will be in the wrong order. Nonetheless, I decided
+not to delete the code that follows from this notebook. After all, in my
+local environment the next function works perfectly. So, instead of removing
+its code, I added an alternative solution. This solution can be found right
+after the following block, and it'll satisfy Coursera's autograder.
 
 ```{python}
 def answer_one():
-    
-    # Your code here
-    
-    return # Return your answer
+
+    # Create the dictionary that will be used to build the DataFrame:
+    data = cancer['data']
+    feature_names = cancer['feature_names']
+    data_dict = {feature_names[i]: data[:, i] for i in range(feature_names.size)}
+    data_dict['target'] = cancer['target']
+
+    # Create the desired DataFrame:
+    df = pd.DataFrame(data=data_dict)
+
+    # Testing:
+    cols = [
+        'mean radius',
+        'mean texture',
+        'mean perimeter',
+        'mean area',
+        'mean smoothness',
+        'mean compactness',
+        'mean concavity',
+        'mean concave points',
+        'mean symmetry',
+        'mean fractal dimension',
+        'radius error',
+        'texture error',
+        'perimeter error',
+        'area error',
+        'smoothness error',
+        'compactness error',
+        'concavity error',
+        'concave points error',
+        'symmetry error',
+        'fractal dimension error',
+        'worst radius',
+        'worst texture',
+        'worst perimeter',
+        'worst area',
+        'worst smoothness',
+        'worst compactness',
+        'worst concavity',
+        'worst concave points',
+        'worst symmetry',
+        'worst fractal dimension',
+        'target'
+    ]
+    idx = pd.RangeIndex(start=0, stop=569, step=1)
+    np.testing.assert_array_equal(df.columns, np.array(cols))
+    np.testing.assert_array_equal(df.index, idx)
+    assert df.shape == (569, 31)
+
+    return df
 
 
 answer_one()
 ```
 
-### Question 2
-What is the class distribution? (i.e. how many instances of `malignant` (encoded 0) and how many `benign` (encoded 1)?)
 
-*This function should return a Series named `target` of length 2 with integer values and index =* `['malignant', 'benign']`
+Here's the alternative solution:
+
+
+```{python}
+def answer_one():
+
+    # Create a DataFrame containing only the features:
+    df = pd.DataFrame(data=cancer['data'], columns=cancer['feature_names'])
+
+    # Add to the DataFrame a column that contains the class labels:
+    df['target'] = cancer['target']
+
+    # Testing:
+    cols = [
+        'mean radius',
+        'mean texture',
+        'mean perimeter',
+        'mean area',
+        'mean smoothness',
+        'mean compactness',
+        'mean concavity',
+        'mean concave points',
+        'mean symmetry',
+        'mean fractal dimension',
+        'radius error',
+        'texture error',
+        'perimeter error',
+        'area error',
+        'smoothness error',
+        'compactness error',
+        'concavity error',
+        'concave points error',
+        'symmetry error',
+        'fractal dimension error',
+        'worst radius',
+        'worst texture',
+        'worst perimeter',
+        'worst area',
+        'worst smoothness',
+        'worst compactness',
+        'worst concavity',
+        'worst concave points',
+        'worst symmetry',
+        'worst fractal dimension',
+        'target'
+    ]
+    idx = pd.RangeIndex(start=0, stop=569, step=1)
+    np.testing.assert_array_equal(df.columns, np.array(cols))
+    np.testing.assert_array_equal(df.index, idx)
+    assert df.shape == (569, 31)
+
+    return df
+
+
+answer_one()
+```
+
+
+## Question 2
+
+What is the class distribution? How many instances of `malignant` (encoded 0)
+and how many `benign` (encoded 1)?
+
+*This function should return a Series named* `target`
+*of length 2 with integer values and index =* `['malignant', 'benign']`.
+
+**Note:** The following solution is correct. However, it has the same problem
+as my solution to the first question. It won't work as intended in Coursera's
+environment (again due to its older version of pandas). Specifically, the
+entries of the Series will be in the wrong order. Then I'm going to do the
+same as before. I'll keep the next function, and include an alternative
+solution below.
+
 
 ```{python}
 def answer_two():
-    cancerdf = answer_one()
-    
-    # Your code here
-    
-    return # Return your answer
+
+    # Use the cancer dataset to create a DataFrame:
+    cancer_df = answer_one()
+
+    # Count the number of 'malignant' entries:
+    num_mal = cancer_df[cancer_df['target'] == 0].shape[0]
+
+    # Count the number of 'benign' entries:
+    num_ben = cancer_df[cancer_df['target'] == 1].shape[0]
+
+    # Create the dictionary that will be used to build the Series:
+    distr_dict = {'malignant': num_mal, 'benign': num_ben}
+
+    # Create the desired Series:
+    distr = pd.Series(data=distr_dict)
+
+    return distr
 
 
 answer_two()
 ```
 
-### Question 3
+
+Here's the alternative solution:
+
+
+```{python}
+def answer_two():
+
+    # Use the cancer dataset to create a DataFrame:
+    cancer_df = answer_one()
+
+    # Count the number of 'malignant' entries:
+    num_mal = cancer_df[cancer_df['target'] == 0].shape[0]
+
+    # Count the number of 'benign' entries:
+    num_ben = cancer_df[cancer_df['target'] == 1].shape[0]
+
+    # Create the desired Series:
+    distr = pd.Series(data=[num_mal, num_ben], index=['malignant', 'benign'])
+
+    return distr
+
+
+answer_two()
+```
+
+
+## Question 3
+
 Split the DataFrame into `X` (the data) and `y` (the labels).
 
-*This function should return a tuple of length 2:* `(X, y)`*, where* 
-* `X`*, a pandas DataFrame, has shape* `(569, 30)`
+*This function should return a tuple of length 2:* `(X, y)`*, where*
+* `X`*, a pandas DataFrame, has shape* `(569, 30)`;
 * `y`*, a pandas Series, has shape* `(569,)`.
+
 
 ```{python}
 def answer_three():
-    cancerdf = answer_one()
-    
-    # Your code here
-    
-    return X, y
+
+    # Use the cancer dataset to create a DataFrame:
+    cancer_df = answer_one()
+
+    # Get the index corresponding to the last column of cancer_df:
+    idx = cancer_df.shape[1] - 1
+
+    # Extract the features from cancer_df:
+    X = cancer_df.iloc[:, :idx]
+
+    # Extract the labels from cancer_df:
+    y = cancer_df.iloc[:, idx]
+
+    # Testing:
+    assert X.shape == (569, 30)
+    assert y.shape == (569,)
+
+    return (X, y)
+
+
+# Check if the above function works.
+# Comment out the code below before submitting the notebook for grading.
+# tmp_X, tmp_y = answer_three()
+# print(tmp_X.head())
+# print(tmp_y.head())
 ```
 
-### Question 4
-Using `train_test_split`, split `X` and `y` into training and test sets `(X_train, X_test, y_train, and y_test)`.
+
+## Question 4
+
+Using `train_test_split`, split `X` and `y` into training and test sets
+`(X_train, X_test, y_train, y_test)`.
 
 **Set the random number generator state to 0 using `random_state=0` to make sure your results match the autograder!**
 
-*This function should return a tuple of length 4:* `(X_train, X_test, y_train, y_test)`*, where* 
-* `X_train` *has shape* `(426, 30)`
-* `X_test` *has shape* `(143, 30)`
-* `y_train` *has shape* `(426,)`
-* `y_test` *has shape* `(143,)`
+*This function should return a tuple of length 4:* `(X_train, X_test, y_train, y_test)`*, where*
+* `X_train` *has shape* `(426, 30)`;
+* `X_test` *has shape* `(143, 30)`;
+* `y_train` *has shape* `(426,)`;
+* `y_test` *has shape* `(143,)`.
+
 
 ```{python}
-from sklearn.model_selection import train_test_split
-
 def answer_four():
+
+    # Extract the features and labels from the dataset:
     X, y = answer_three()
-    
-    # Your code here
-    
-    return X_train, X_test, y_train, y_test
+
+    # Split the data into training and test sets:
+    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+
+    # Testing:
+    assert X_train.shape == (426, 30)
+    assert X_test.shape == (143, 30)
+    assert y_train.shape == (426,)
+    assert y_test.shape == (143,)
+
+    return (X_train, X_test, y_train, y_test)
+
+
+# Check if the above function works.
+# Comment out the code below before submitting the notebook for grading.
+# tmp_X_train, tmp_X_test, tmp_y_train, tmp_y_test = answer_four()
+# print(tmp_X_train.head())
+# print(tmp_X_test.head())
+# print(tmp_y_train.head())
+# print(tmp_y_test.head())
 ```
 
-### Question 5
-Using KNeighborsClassifier, fit a k-nearest neighbors (knn) classifier with `X_train`, `y_train` and using one nearest neighbor (`n_neighbors = 1`).
 
-*This function should return a * `sklearn.neighbors.classification.KNeighborsClassifier`.
+## Question 5
+
+Using `KNeighborsClassifier`, fit a k-nearest neighbors (knn) classifier with
+`X_train`, `y_train` and using one nearest neighbor (`n_neighbors = 1`).
+
+*This function should return a* `sklearn.neighbors.classification.KNeighborsClassifier`.
+
 
 ```{python}
-from sklearn.neighbors import KNeighborsClassifier
-
 def answer_five():
+
+    # Split the data into training and test sets:
     X_train, X_test, y_train, y_test = answer_four()
-    
-    # Your code here
-    
-    return # Return your answer
+
+    # Instantiate KNeighborsClassifier with one nearest neighbor:
+    clf = KNeighborsClassifier(n_neighbors=1)
+
+    # Fit the k-nearest neighbors classifier using the training data:
+    clf.fit(X_train, y_train)
+
+    return clf
 ```
 
-### Question 6
-Using your knn classifier, predict the class label using the mean value for each feature.
 
-Hint: You can use `cancerdf.mean()[:-1].values.reshape(1, -1)` which gets the mean value for each feature, ignores the target column, and reshapes the data from 1 dimension to 2 (necessary for the precict method of KNeighborsClassifier).
+## Question 6
 
-*This function should return a numpy array either `array([ 0.])` or `array([ 1.])`*
+Using your knn classifier, predict the class label using the mean value for
+each feature.
+
+*This function should return a numpy array either* `array([0.])` *or* `array([1.])`.
+
 
 ```{python}
 def answer_six():
-    cancerdf = answer_one()
-    means = cancerdf.mean()[:-1].values.reshape(1, -1)
-    
-    # Your code here
-    
-    return # Return your answer
+
+    # Use the cancer dataset to create a DataFrame:
+    cancer_df = answer_one()
+
+    # Fit the k-nearest neighbors classifier using the training data, and one nearest neighbor:
+    clf = answer_five()
+
+    # Get the mean value for each feature.
+    # Reshape the result from 1 dimension to 2 (necessary for the 'predict' method of KNeighborsClassifier).
+    means = cancer_df.mean()[:-1].values.reshape(1, -1)
+
+    # Predict the class label using the mean value for each feature:
+    prediction = clf.predict(means)
+
+    return prediction
+
+
+answer_six()
 ```
 
-### Question 7
+
+## Question 7
+
 Using your knn classifier, predict the class labels for the test set `X_test`.
 
-*This function should return a numpy array with shape `(143,)` and values either `0.0` or `1.0`.*
+*This function should return a numpy array with shape* `(143,)` *and values either* `0.0` *or* `1.0`.
+
 
 ```{python}
 def answer_seven():
+
+    # Split the data into training and test sets:
     X_train, X_test, y_train, y_test = answer_four()
-    knn = answer_five()
-    
-    # Your code here
-    
-    return # Return your answer
+
+    # Fit the k-nearest neighbors classifier using the training data, and one nearest neighbor:
+    clf = answer_five()
+
+    # Predict the class labels for the test set X_test:
+    predictions = clf.predict(X_test)
+
+    # Testing:
+    assert predictions.shape == (143,)
+
+    return predictions
+
+
+answer_seven()
 ```
 
-### Question 8
+
+## Question 8
+
 Find the score (mean accuracy) of your knn classifier using `X_test` and `y_test`.
 
-*This function should return a float between 0 and 1*
+*This function should return a float between 0 and 1.*
+
 
 ```{python}
 def answer_eight():
+
+    # Split the data into training and test sets:
     X_train, X_test, y_train, y_test = answer_four()
-    knn = answer_five()
-    
-    # Your code here
-    
-    return # Return your answer
+
+    # Fit the k-nearest neighbors classifier using the training data, and one nearest neighbor:
+    clf = answer_five()
+
+    # Compute the score (mean accuracy) of the classifier using X_test and y_test:
+    score = clf.score(X_test, y_test)
+
+    return score
+
+
+answer_eight()
 ```
 
-### Optional plot
 
-Try using the plotting function below to visualize the differet predicition scores between training and test sets, as well as malignant and benign cells.
+## Optional plot
+
+Try using the plotting function below to visualize the different prediction
+scores between training and test sets, as well as malignant and benign cells.
+
 
 ```{python}
-def accuracy_plot():
-    import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-    %matplotlib notebook
+
+# %matplotlib notebook
+
+
+def accuracy_plot():
 
     X_train, X_test, y_train, y_test = answer_four()
 
-    # Find the training and testing accuracies by target value (i.e. malignant, benign)
-    mal_train_X = X_train[y_train==0]
-    mal_train_y = y_train[y_train==0]
-    ben_train_X = X_train[y_train==1]
-    ben_train_y = y_train[y_train==1]
+    # Compute the training and test accuracies by target value (i.e., malignant or benign):
 
-    mal_test_X = X_test[y_test==0]
-    mal_test_y = y_test[y_test==0]
-    ben_test_X = X_test[y_test==1]
-    ben_test_y = y_test[y_test==1]
+    mal_train_X = X_train[y_train == 0]
+    mal_train_y = y_train[y_train == 0]
+
+    ben_train_X = X_train[y_train == 1]
+    ben_train_y = y_train[y_train == 1]
+
+    mal_test_X = X_test[y_test == 0]
+    mal_test_y = y_test[y_test == 0]
+
+    ben_test_X = X_test[y_test == 1]
+    ben_test_y = y_test[y_test == 1]
 
     knn = answer_five()
 
-    scores = [knn.score(mal_train_X, mal_train_y), knn.score(ben_train_X, ben_train_y), 
-              knn.score(mal_test_X, mal_test_y), knn.score(ben_test_X, ben_test_y)]
-
+    scores = [
+        knn.score(mal_train_X, mal_train_y),
+        knn.score(ben_train_X, ben_train_y),
+        knn.score(mal_test_X, mal_test_y),
+        knn.score(ben_test_X, ben_test_y)
+    ]
 
     plt.figure()
 
-    # Plot the scores as a bar chart
-    bars = plt.bar(np.arange(4), scores, color=['#4c72b0','#4c72b0','#55a868','#55a868'])
+    # Plot the scores as a bar chart:
+    bars = plt.bar(np.arange(4), scores, color=['#4c72b0', '#4c72b0', '#55a868', '#55a868'])
 
-    # directly label the score onto the bars
+    # Directly label the score onto the bars:
     for bar in bars:
         height = bar.get_height()
-        plt.gca().text(bar.get_x() + bar.get_width()/2, height*.90, '{0:.{1}f}'.format(height, 2), 
-                     ha='center', color='w', fontsize=11)
+        plt.gca().text(
+            bar.get_x() + bar.get_width() / 2,
+            height * .90,
+            '{0:.{1}f}'.format(height, 2),
+            ha='center',
+            color='w',
+            fontsize=11
+        )
 
-    # remove all the ticks (both axes), and tick labels on the Y axis
+    # Remove all the ticks (both axes), and tick labels on the y axis:
     plt.tick_params(top='off', bottom='off', left='off', right='off', labelleft='off', labelbottom='on')
 
-    # remove the frame of the chart
+    # Remove the frame of the chart:
     for spine in plt.gca().spines.values():
         spine.set_visible(False)
 
-    plt.xticks([0,1,2,3], ['Malignant\nTraining', 'Benign\nTraining', 'Malignant\nTest', 'Benign\nTest'], alpha=0.8);
+    plt.xticks([0, 1, 2, 3], ['Malignant\nTraining', 'Benign\nTraining', 'Malignant\nTest', 'Benign\nTest'], alpha=0.8);
     plt.title('Training and Test Accuracies for Malignant and Benign Cells', alpha=0.8)
 ```
 
+
 Uncomment the plotting function to see the visualization.
 
-**Comment out** the plotting function when submitting your notebook for grading. 
+**Comment out** the plotting function when submitting your notebook for grading.
+
 
 ```{python}
-#accuracy_plot() 
-```
-
-```{python}
-
+accuracy_plot()
 ```
