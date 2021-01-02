@@ -28,133 +28,283 @@
 # sections.
 
 # %%
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import Lasso, LinearRegression
+from sklearn.metrics import r2_score
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import PolynomialFeatures
 
 
+# %matplotlib notebook
 np.random.seed(0)
+
+# Number of data points:
 n = 15
-x = np.linspace(0,10,n) + np.random.randn(n)/5
-y = np.sin(x)+x/6 + np.random.randn(n)/10
+
+# Generate some synthetic data:
+X = np.linspace(0, 10, n) + np.random.randn(n) / 5
+y = np.sin(X) + X / 6 + np.random.randn(n) / 10
+
+# Split the data into training and test sets:
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
 
 
-X_train, X_test, y_train, y_test = train_test_split(x, y, random_state=0)
-
-# You can use this function to help you visualize the dataset by
-# plotting a scatterplot of the data points
-# in the training and test sets.
 def part1_scatter():
-    import matplotlib.pyplot as plt
-    %matplotlib notebook
+    """Create a scatterplot of the data points in the training and test sets."""
     plt.figure()
-    plt.scatter(X_train, y_train, label='training data')
-    plt.scatter(X_test, y_test, label='test data')
+    plt.scatter(X_train, y_train, label='Training Data')
+    plt.scatter(X_test, y_test, label='Test Data')
     plt.legend(loc=4);
 
 
-# NOTE: Uncomment the function below to visualize the data, but be sure
-# to **re-comment it before submitting this assignment to the autograder**.
-#part1_scatter()
+# NOTE: Uncomment the function below to visualize the data, but be sure to
+# re-comment it before submitting this assignment to the autograder.
+part1_scatter()
 
 # %% [markdown]
 # ### Question 1
 #
-# Write a function that fits a polynomial LinearRegression model on the *training data* `X_train` for degrees 1, 3, 6, and 9. (Use PolynomialFeatures in sklearn.preprocessing to create the polynomial features and then fit a linear regression model) For each model, find 100 predicted values over the interval x = 0 to 10 (e.g. `np.linspace(0,10,100)`) and store this in a numpy array. The first row of this array should correspond to the output from the model trained on degree 1, the second row degree 3, the third row degree 6, and the fourth row degree 9.
+# Write a function that fits a polynomial `LinearRegression` model on the
+# *training data* `X_train` for degrees 1, 3, 6, and 9. Use
+# `PolynomialFeatures` in `sklearn.preprocessing` to create the polynomial
+# features and then fit a linear regression model. For each model, find 100
+# predicted values over the interval $x = 0$ to $10$ (e.g., `np.linspace(0, 10, 100)`)
+# and store this in a numpy array. The first row of this array should
+# correspond to the output from the model trained on degree 1, the second row
+# degree 3, the third row degree 6, and the fourth row degree 9.
 #
-# <img src="readonly/polynomialreg1.png" style="width: 1000px;"/>
+# <img src="polynomialreg1.png" style="width: 1000px;"/>
 #
-# The figure above shows the fitted models plotted on top of the original data (using `plot_one()`).
+# The figure above shows the fitted models plotted on top of the original data
+# (using `plot_one()`).
 #
-# <br>
-# *This function should return a numpy array with shape `(4, 100)`*
+# *This function should return a numpy array with shape `(4, 100)`.*
 
 # %%
+def predict_single_degree(degree):
+    """Given the degree of the polynomial, compute the predictions."""
+
+    # Reshape the training data X_train.
+    # Put the data in the format expected by the fit_transform method of PolynomialFeatures.
+    X_train_rsh = X_train.reshape((X_train.size, 1))
+
+    # Generate the polynomial features from X_train_rsh:
+    X_train_poly_feats = PolynomialFeatures(degree=degree).fit_transform(X_train_rsh)
+
+    # Create a LinearRegression object, and fit the model using the polynomial features:
+    lin_regr = LinearRegression().fit(X_train_poly_feats, y_train)
+
+    # Generate the feature values used for prediction:
+    X_pred = np.linspace(0, 10, 100).reshape((100, 1))
+    X_pred_poly_feats = PolynomialFeatures(degree=degree).fit_transform(X_pred)
+
+    # Compute the predicted values:
+    predictions = lin_regr.predict(X_pred_poly_feats)
+
+    return predictions
+
+
 def answer_one():
-    from sklearn.linear_model import LinearRegression
-    from sklearn.preprocessing import PolynomialFeatures
 
-    # Your code here
+    # List containing the degrees of the polynomials:
+    degrees = [1, 3, 6, 9]
+    num_degrees = len(degrees)
 
-    return # Return your answer
+    # Initialize the array that will store all of the predictions:
+    degree_predictions = np.zeros((num_degrees, 100))
 
+    # Loop over the degrees:
+    for i in range(num_degrees):
+        degree_predictions[i, :] = predict_single_degree(degrees[i])
+
+    return degree_predictions
 
 # %%
-# feel free to use the function plot_one() to replicate the figure
-# from the prompt once you have completed question one
 def plot_one(degree_predictions):
-    import matplotlib.pyplot as plt
-    %matplotlib notebook
-    plt.figure(figsize=(10,5))
-    plt.plot(X_train, y_train, 'o', label='training data', markersize=10)
-    plt.plot(X_test, y_test, 'o', label='test data', markersize=10)
-    for i,degree in enumerate([1,3,6,9]):
-        plt.plot(np.linspace(0,10,100), degree_predictions[i], alpha=0.8, lw=2, label='degree={}'.format(degree))
-    plt.ylim(-1,2.5)
+    """Use this function to replicate the figure given above."""
+    plt.figure(figsize=(10, 5))
+    plt.plot(X_train, y_train, 'o', label='Training Data', markersize=10)
+    plt.plot(X_test, y_test, 'o', label='Test Data', markersize=10)
+    for i, degree in enumerate([1, 3, 6, 9]):
+        plt.plot(
+            np.linspace(0, 10, 100),
+            degree_predictions[i],
+            alpha=0.8,
+            lw=2,
+            label='Degree = {}'.format(degree)
+        )
+    plt.ylim(-1, 2.5)
     plt.legend(loc=4)
 
-#plot_one(answer_one())
 
+plot_one(answer_one())
 
 # %% [markdown]
 # ### Question 2
 #
-# Write a function that fits a polynomial LinearRegression model on the training data `X_train` for degrees 0 through 9. For each model compute the $R^2$ (coefficient of determination) regression score on the training data as well as the the test data, and return both of these arrays in a tuple.
+# Write a function that fits a polynomial LinearRegression model on the
+# training data `X_train` for degrees 0 through 9. For each model compute the
+# $R^2$ (coefficient of determination) regression score on the training data as
+# well as the test data, and return both of these arrays in a tuple.
 #
-# *This function should return one tuple of numpy arrays `(r2_train, r2_test)`. Both arrays should have shape `(10,)`*
+# *This function should return one tuple of numpy arrays `(r2_train, r2_test)`.
+# Both arrays should have shape `(10,)`.*
 
 # %%
+def scores_single_degree(degree):
+    """Given the degree of the polynomial, compute the R^2 regression score
+       for the training and test sets."""
+
+    # Generate the polynomial features for the training data X_train:
+    X_train_poly_feats = PolynomialFeatures(degree=degree).fit_transform(X_train.reshape((X_train.size, 1)))
+
+    # Generate the polynomial features for the test data X_test:
+    X_test_poly_feats = PolynomialFeatures(degree=degree).fit_transform(X_test.reshape((X_test.size, 1)))
+
+    # Create a LinearRegression object, and fit the model using the polynomial features for the training data:
+    lin_regr = LinearRegression().fit(X_train_poly_feats, y_train)
+
+    # Compute the predicted values using the training data:
+    y_train_pred = lin_regr.predict(X_train_poly_feats)
+
+    # Compute the predicted values using the test data:
+    y_test_pred = lin_regr.predict(X_test_poly_feats)
+
+    # Compute the regression score associated with the training data:
+    r2_train = r2_score(y_train, y_train_pred)
+
+    # Compute the regression score associated with the test data:
+    r2_test = r2_score(y_test, y_test_pred)
+
+    return (r2_train, r2_test)
+
+
 def answer_two():
-    from sklearn.linear_model import LinearRegression
-    from sklearn.preprocessing import PolynomialFeatures
-    from sklearn.metrics.regression import r2_score
 
-    # Your code here
+    # List containing the degrees of the polynomials:
+    degrees = [degree for degree in range(10)]
+    num_degrees = len(degrees)
 
-    return # Your answer here
+    # Initialize the arrays that will store the regression scores:
+    scores_train = np.zeros(num_degrees)
+    scores_test = np.zeros(num_degrees)
 
+    # Loop over the degrees:
+    for i in range(num_degrees):
+        scores_tuple = scores_single_degree(degrees[i])
+        scores_train[i] = scores_tuple[0]
+        scores_test[i] = scores_tuple[1]
+
+    return (scores_train, scores_test)
+
+
+answer_two()
 
 # %% [markdown]
 # ### Question 3
 #
-# Based on the $R^2$ scores from question 2 (degree levels 0 through 9), what degree level corresponds to a model that is underfitting? What degree level corresponds to a model that is overfitting? What choice of degree level would provide a model with good generalization performance on this dataset?
+# Based on the $R^2$ scores from question 2 (degree levels 0 through 9), what
+# degree level corresponds to a model that is underfitting? What degree level
+# corresponds to a model that is overfitting? What choice of degree level would
+# provide a model with good generalization performance on this dataset?
 #
-# Hint: Try plotting the $R^2$ scores from question 2 to visualize the relationship between degree level and $R^2$. Remember to comment out the import matplotlib line before submission.
+# Hint: Try plotting the $R^2$ scores from question 2 to visualize the
+# relationship between degree level and $R^2$. Remember to comment out the
+# `import matplotlib` line before submission.
 #
-# *This function should return one tuple with the degree values in this order: `(Underfitting, Overfitting, Good_Generalization)`. There might be multiple correct solutions, however, you only need to return one possible solution, for example, (1,2,3).*
+# *This function should return one tuple with the degree values in this order:
+# `(Underfitting, Overfitting, Good_Generalization)`. There might be multiple
+# correct solutions, however, you only need to return one possible solution,
+# for example, (1, 2, 3).*
 
 # %%
+def plot_two():
+    """Plot the R^2 regression scores computed by the previous function."""
+    scores_train, scores_test = answer_two()
+    fig, ax = plt.subplots(figsize=(10, 5))
+    labels = [str(i) for i in range(10)]
+    x = np.arange(len(labels))
+    width = 0.3
+    rects_1 = ax.bar(x - width / 2, scores_train, width, label='Training Data')
+    rects_2 = ax.bar(x + width / 2, scores_test, width, label='Test Data')
+    ax.set_xlabel('Degree')
+    ax.set_ylabel('Score')
+    ax.set_title('Regression Scores for the Training and Test Sets')
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.legend()
+    plt.show()
+
+
+plot_two()
+
+
 def answer_three():
 
-    # Your code here
+    underfitting = 1
+    overfitting = 9
+    good_generalization = 6
 
-    return # Return your answer
-
+    return (underfitting, overfitting, good_generalization)
 
 # %% [markdown]
 # ### Question 4
 #
-# Training models on high degree polynomial features can result in overly complex models that overfit, so we often use regularized versions of the model to constrain model complexity, as we saw with Ridge and Lasso linear regression.
+# Training models on high degree polynomial features can result in overly
+# complex models that overfit, so we often use regularized versions of the
+# model to constrain model complexity, as we saw with Ridge and Lasso linear
+# regression.
 #
-# For this question, train two models: a non-regularized LinearRegression model (default parameters) and a regularized Lasso Regression model (with parameters `alpha=0.01`, `max_iter=10000`) both on polynomial features of degree 12. Return the $R^2$ score for both the LinearRegression and Lasso model's test sets.
+# For this question, train two models: a non-regularized LinearRegression model
+# (default parameters) and a regularized Lasso Regression model (with
+# parameters `alpha=0.01`, `max_iter=10000`) both on polynomial features of
+# degree 12. Return the $R^2$ score for both the LinearRegression and Lasso
+# model's test sets.
 #
-# *This function should return one tuple `(LinearRegression_R2_test_score, Lasso_R2_test_score)`*
+# *This function should return one tuple `(LinearRegression_R2_test_score, Lasso_R2_test_score)`.*
 
 # %%
 def answer_four():
-    from sklearn.preprocessing import PolynomialFeatures
-    from sklearn.linear_model import Lasso, LinearRegression
-    from sklearn.metrics.regression import r2_score
 
-    # Your code here
+    # Generate the polynomial features for the training data X_train:
+    X_train_poly_feats = PolynomialFeatures(degree=12).fit_transform(X_train.reshape((X_train.size, 1)))
 
-    return # Your answer here
+    # Generate the polynomial features for the test data X_test:
+    X_test_poly_feats = PolynomialFeatures(degree=12).fit_transform(X_test.reshape((X_test.size, 1)))
 
+    # Create a LinearRegression object, and fit the model using the polynomial features for the training data:
+    lin_regr = LinearRegression().fit(X_train_poly_feats, y_train)
+
+    # Create a Lasso object, and fit the model using the polynomial features for the training data:
+    lasso = Lasso(alpha=0.01, max_iter=10000).fit(X_train_poly_feats, y_train)
+
+    # Using the non-regularized model, compute the predictions for the test data:
+    y_test_pred_lin_regr = lin_regr.predict(X_test_poly_feats)
+
+    # Using the regularized model, compute the predictions for the test data:
+    y_test_pred_lasso = lasso.predict(X_test_poly_feats)
+
+    # Using the non-regularized model, compute the regression score associated with the test data:
+    r2_test_lin_regr = r2_score(y_test, y_test_pred_lin_regr)
+
+    # Using the regularized model, compute the regression score associated with the test data:
+    r2_test_lasso = r2_score(y_test, y_test_pred_lasso)
+
+    return (r2_test_lin_regr, r2_test_lasso)
+
+
+answer_four()
 
 # %% [markdown]
 # ## Part 2 - Classification
 #
-# Here's an application of machine learning that could save your life! For this section of the assignment we will be working with the [UCI Mushroom Data Set](http://archive.ics.uci.edu/ml/datasets/Mushroom?ref=datanews.io) stored in `readonly/mushrooms.csv`. The data will be used to train a model to predict whether or not a mushroom is poisonous. The following attributes are provided:
+# Here's an application of machine learning that could save your life! For this
+# section of the assignment we will be working with the [UCI Mushroom Data
+# Set](http://archive.ics.uci.edu/ml/datasets/Mushroom?ref=datanews.io) stored
+# in `mushrooms.csv`. The data will be used to train a model to predict whether
+# or not a mushroom is poisonous. The following attributes are provided:
 #
 # *Attribute Information:*
 #
@@ -181,38 +331,34 @@ def answer_four():
 # 21. population: abundant=a, clustered=c, numerous=n, scattered=s, several=v, solitary=y
 # 22. habitat: grasses=g, leaves=l, meadows=m, paths=p, urban=u, waste=w, woods=d
 #
-# <br>
-#
-# The data in the mushrooms dataset is currently encoded with strings. These values will need to be encoded to numeric to work with sklearn. We'll use pd.get_dummies to convert the categorical variables into indicator variables.
+# The data in the mushrooms dataset is currently encoded with strings. These
+# values will need to be encoded to numeric to work with sklearn. We'll use
+# pd.get_dummies to convert the categorical variables into indicator variables.
 
 # %%
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-
-
-mush_df = pd.read_csv('readonly/mushrooms.csv')
+# mush_df = pd.read_csv('readonly/mushrooms.csv')
+mush_df = pd.read_csv('mushrooms.csv')
 mush_df2 = pd.get_dummies(mush_df)
 
-X_mush = mush_df2.iloc[:,2:]
-y_mush = mush_df2.iloc[:,1]
+X_mush = mush_df2.iloc[:, 2:]
+y_mush = mush_df2.iloc[:, 1]
 
-# use the variables X_train2, y_train2 for Question 5
+# Use the variables X_train2, y_train2 for Question 5.
 X_train2, X_test2, y_train2, y_test2 = train_test_split(X_mush, y_mush, random_state=0)
 
-# For performance reasons in Questions 6 and 7, we will create a smaller version of the
-# entire mushroom dataset for use in those questions.  For simplicity we'll just re-use
-# the 25% test split created above as the representative subset.
-#
+# For performance reasons, in Questions 6 and 7, we will create a smaller
+# version of the entire mushroom dataset for use in those questions. For
+# simplicity we'll just re-use the 25% test split created above as the
+# representative subset.
+
 # Use the variables X_subset, y_subset for Questions 6 and 7.
 X_subset = X_test2
 y_subset = y_test2
 
-
 # %% [markdown]
 # ### Question 5
 #
-# Using `X_train2` and `y_train2` from the preceeding cell, train a DecisionTreeClassifier with default parameters and random_state=0. What are the 5 most important features found by the decision tree?
+# Using `X_train2` and `y_train2` from the preceding cell, train a DecisionTreeClassifier with default parameters and random_state=0. What are the 5 most important features found by the decision tree?
 #
 # As a reminder, the feature names are available in the `X_train2.columns` property, and the order of the features in `X_train2.columns` matches the order of the feature importance values in the classifier's `feature_importances_` property.
 #
