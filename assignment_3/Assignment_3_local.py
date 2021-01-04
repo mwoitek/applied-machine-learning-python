@@ -35,8 +35,13 @@ import pandas as pd
 import seaborn as sns
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, precision_score, recall_score
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import precision_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import roc_curve
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 
@@ -130,7 +135,7 @@ answer_two()
 def answer_three():
 
     # Create an SVC object:
-    clf = SVC(random_state=0)
+    clf = SVC()
 
     # Fit this classifier using the training data:
     clf.fit(X_train, y_train)
@@ -165,44 +170,84 @@ answer_three()
 # %%
 def answer_four():
 
-    #
+    # Create an SVC object with the parameters specified above:
+    clf = SVC(C=1e9, gamma=1e-7)
 
-    return 0
+    # Fit this classifier using the training data:
+    clf.fit(X_train, y_train)
+
+    # Get the predictions for the test data:
+    y_test_pred = (clf.decision_function(X_test) > -220).astype(int)
+
+    # Compute the confusion matrix:
+    confusion = confusion_matrix(y_test, y_test_pred)
+
+    return confusion
 
 
 answer_four()
 
 # %% [markdown]
-# ### Question 5
+# ## Question 5
 #
-# Train a logistic regression classifier with default parameters using X_train and y_train.
+# Train a logistic regression classifier with default parameters using `X_train`
+# and `y_train`.
 #
-# For the logistic regression classifier, create a precision recall curve and a ROC curve using y_test and the probability estimates for X_test (probability it is fraud).
+# For the logistic regression classifier, create a precision recall curve and a
+# ROC curve using `y_test` and the probability estimates for `X_test` (probability
+# it is fraud).
 #
-# Looking at the precision recall curve, what is the recall when the precision is `0.75`?
+# Looking at the precision recall curve, what is the recall when the precision
+# is `0.75`?
 #
-# Looking at the ROC curve, what is the true positive rate when the false positive rate is `0.16`?
+# Looking at the ROC curve, what is the true positive rate when the false
+# positive rate is `0.16`?
 #
-# *This function should return a tuple with two floats, i.e., `(recall, true positive rate)`.*
+# *This function should return a tuple with two floats, i.e.,
+# `(recall, true positive rate)`.*
 
 # %%
 def answer_five():
 
-    # Your code here
+    # Create a LogisticRegression object:
+    clf = LogisticRegression(solver='liblinear')
 
-    return # Return your answer
+    # Fit this classifier using the training data:
+    clf.fit(X_train, y_train)
 
+    # Compute the probability estimates using the test data:
+    probs = clf.predict_proba(X_test)[:, 1]
+
+    # Use these probabilities and y_test to compute precision-recall pairs:
+    precisions, recalls, _ = precision_recall_curve(y_test, probs)
+
+    # Get the recall value corresponding to a precision of 0.75:
+    recall = recalls[np.abs(precisions - 0.75).argmin()]
+
+    # Use probs and y_test to compute false/true positive rates:
+    fprs, tprs, _ = roc_curve(y_test, probs)
+
+    # Get the true positive rate corresponding to a false positive rate of 0.16:
+    tpr = tprs[np.abs(fprs - 0.16).argmin()]
+
+    return (recall, tpr)
+
+
+answer_five()
 
 # %% [markdown]
-# ### Question 6
+# ## Question 6
 #
-# Perform a grid search over the parameters listed below for a Logistic Regression classifier, using recall for scoring and the default 3-fold cross validation.
+# Perform a grid search over the parameters listed below for a Logistic
+# Regression classifier, using recall for scoring and the default 3-fold cross
+# validation.
 #
 # `'penalty': ['l1', 'l2']`
 #
-# `'C':[0.01, 0.1, 1, 10, 100]`
+# `'C': [0.01, 0.1, 1, 10, 100]`
 #
-# From `.cv_results_`, create an array of the mean test scores of each parameter combination. i.e.
+# From `.cv_results_`, create an array of the mean test scores of each
+# parameter combination, i.e.,
 #
 # |      	| `l1` 	| `l2` 	|
 # |:----:	|----	|----	|
@@ -210,25 +255,58 @@ def answer_five():
 # | **`0.1`**  	|    ?	|   ? 	|
 # | **`1`**    	|    ?	|   ? 	|
 # | **`10`**   	|    ?	|   ? 	|
-# | **`100`**   	|    ?	|   ? 	|
+# | **`100`**  	|    ?	|   ? 	|
 #
 # *This function should return a 5 by 2 numpy array with 10 floats.*
 #
-# *Note: do not return a DataFrame, just the values denoted by '?' above in a numpy array. You might need to reshape your raw result to meet the format we are looking for.*
+# *Note: Do not return a DataFrame, just the values denoted by '?' above in a
+# numpy array. You might need to reshape your raw result to meet the format we
+# are looking for.*
 
 # %%
 def answer_six():
 
-    # Your code here
+    # Parameters of the GridSearchCV object (as specified above):
+    estimator = LogisticRegression(solver='liblinear')
+    param_grid = {
+        'penalty': ['l1', 'l2'],
+        'C': [0.01, 0.1, 1, 10, 100]
+    }
+    scoring = 'recall'
+    cv = 3
 
-    return # Return your answer
+    # Create the GridSearchCV object:
+    gs_lr = GridSearchCV(estimator=estimator, param_grid=param_grid, scoring=scoring, cv=cv)
 
+    # Using the training data, run fit with all sets of parameters:
+    gs_lr.fit(X_train, y_train)
+
+    # Create a DataFrame containing all of the results:
+    results = pd.DataFrame(data=gs_lr.cv_results_)
+
+    # Keep only the columns that matter, and sort the DataFrame by the values of C:
+    results = results.loc[:, ['param_C', 'param_penalty', 'mean_test_score']].sort_values(by='param_C')
+
+    # Get the mean test scores corresponding to the 'l1' penalty:
+    mts_l1 = results.mean_test_score[results.param_penalty == 'l1'].values.reshape((-1, 1))
+
+    # Get the mean test scores corresponding to the 'l2' penalty:
+    mts_l2 = results.mean_test_score[results.param_penalty == 'l2'].values.reshape((-1, 1))
+
+    # Stack these arrays horizontally to get the final result:
+    mts = np.hstack((mts_l1, mts_l2))
+
+    return mts
+
+
+answer_six()
 
 # %%
-# Use the following function to help visualize results from the grid search
 def GridSearch_Heatmap(scores):
+    """Function for visualizing the results from the grid search."""
     plt.figure()
-    sns.heatmap(scores.reshape(5,2), xticklabels=['l1','l2'], yticklabels=[0.01, 0.1, 1, 10, 100])
+    sns.heatmap(scores.reshape(5, 2), xticklabels=['l1', 'l2'], yticklabels=[0.01, 0.1, 1, 10, 100])
     plt.yticks(rotation=0);
 
-#GridSearch_Heatmap(answer_six())
+
+GridSearch_Heatmap(answer_six())
